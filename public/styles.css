@@ -225,9 +225,6 @@ li.gift.is-claimed .g-title{
   border-radius: 20px;
   border: 1px solid currentColor;
 }
-.tag.price-baixo{ color: var(--pine); }
-.tag.price-medio{ color: var(--gold); }
-.tag.price-alto{ color: var(--wine); }
 .tag.claimed-tag{
   color: var(--claimed);
   background: rgba(110,127,92,0.12);
@@ -297,6 +294,10 @@ form.add-form h3{
 }
 .field label{
   font-size: 0.76rem;
+  color: var(--ink-soft);
+}
+.field-help{
+  font-size: 0.72rem;
   color: var(--ink-soft);
 }
 .field input, .field textarea, .field select{
