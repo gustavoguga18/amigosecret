@@ -67,8 +67,8 @@
   }
   function priceTagLabel(price){
     if(price === 'baixo') return '$ até 50';
-    if(price === 'alto') return '$$$ acima de 150';
-    return '$$ 50–150';
+    if(price === 'alto') return '$$$ acima de 100';
+    return '$$ 50–100';
   }
 
   async function selectPerson(name){
@@ -133,8 +133,8 @@
             <label for="f-price">Faixa de preço</label>
             <select id="f-price">
               <option value="baixo">até R$ 50</option>
-              <option value="medio" selected>R$ 50 a 150</option>
-              <option value="alto">acima de R$ 150</option>
+              <option value="medio" selected>R$ 50 a 100</option>
+              <option value="alto">acima de R$ 100</option>
             </select>
           </div>
         </div>
