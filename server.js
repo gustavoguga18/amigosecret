@@ -6,15 +6,15 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY;
 const SUPABASE_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'gift-images';
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn('AVISO: defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no ambiente antes de iniciar em produção.');
+if (!SUPABASE_URL || !SUPABASE_SECRET_KEY) {
+  console.warn('AVISO: defina SUPABASE_URL e SUPABASE_SECRET_KEY no ambiente antes de iniciar em produção.');
 }
 
-const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+const supabase = (SUPABASE_URL && SUPABASE_SECRET_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_SECRET_KEY)
   : null;
 
 app.use(express.json({ limit: '6mb' }));
@@ -22,7 +22,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 function ensureSupabase(res) {
   if (!supabase) {
-    res.status(500).json({ error: 'Supabase não configurado. Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.' });
+    res.status(500).json({ error: 'Supabase não configurado. Defina SUPABASE_URL e SUPABASE_SECRET_KEY.' });
     return false;
   }
   return true;
