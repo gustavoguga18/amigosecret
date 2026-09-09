@@ -11,6 +11,7 @@
   const enterBtn = document.getElementById('enter-btn');
   const meLabel = document.getElementById('me-label');
   const switchBtn = document.getElementById('switch-btn');
+  const editNameBtn = document.getElementById('edit-name-btn');
   const peopleListEl = document.getElementById('people-list');
   const panel = document.getElementById('panel');
   const toastEl = document.getElementById('toast');
@@ -225,6 +226,41 @@
     }
   }
 
+
+  async function editCurrentName(){
+    if(!currentUser) return;
+    const newName = window.prompt('Digite o novo nome:', currentUser);
+    if(newName === null) return;
+    const cleanName = newName.trim();
+    if(!cleanName || cleanName === currentUser){
+      if(!cleanName) showToast('Digite um nome válido.');
+      return;
+    }
+
+    editNameBtn.disabled = true;
+    try{
+      const oldName = currentUser;
+      const data = await api('/people/' + encodeURIComponent(oldName), {
+        method: 'PATCH',
+        body: JSON.stringify({ name: cleanName })
+      });
+      currentUser = data.name;
+      selectedPerson = data.name;
+      peopleCache[data.name] = data.gifts;
+      delete peopleCache[oldName];
+      localStorage.setItem(STORAGE_KEY, currentUser);
+      meLabel.textContent = currentUser;
+      await loadPeopleList();
+      renderPeopleList();
+      renderPanel();
+      showToast('Nome alterado com sucesso!');
+    }catch(e){
+      showToast(e.message || 'Não consegui alterar o nome.');
+    }finally{
+      editNameBtn.disabled = false;
+    }
+  }
+
   async function enterAs(name){
     enterBtn.disabled = true;
     enterBtn.textContent = 'Entrando...';
@@ -255,6 +291,8 @@
   nameInput.addEventListener('keydown', (e) => {
     if(e.key === 'Enter') enterBtn.click();
   });
+
+  editNameBtn.addEventListener('click', editCurrentName);
 
   switchBtn.addEventListener('click', () => {
     currentUser = null;
