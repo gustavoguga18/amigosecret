@@ -184,24 +184,62 @@ app.post('/api/people/:name/gifts', async (req, res) => {
   }
 });
 
-// Alterna o status "reservado" de um item
+// Alterna o status "reservado" de um item.
+// A pessoa que reservou o item é registrada em claimed_by.
+// Somente ela pode desfazer a própria reserva.
 app.patch('/api/gifts/:giftId/claim', async (req, res) => {
   try {
+    const user = String((req.body || {}).user || '').trim().slice(0, 60);
+    if (!user) {
+      return res.status(400).json({ error: 'Usuário é obrigatório' });
+    }
+
     const { data: gift, error: gErr } = await supabase
-      .from('gifts').select('*').eq('id', req.params.giftId).maybeSingle();
+      .from('gifts')
+      .select('*')
+      .eq('id', req.params.giftId)
+      .maybeSingle();
+
     if (gErr) throw gErr;
     if (!gift) return res.status(404).json({ error: 'Item não encontrado' });
 
+    let update;
+
+    if (!gift.claimed) {
+      // Item livre: quem clicar passa a ser o responsável pela reserva.
+      update = { claimed: true, claimed_by: user };
+    } else {
+      // Item já reservado: somente quem reservou pode desfazer.
+      if (gift.claimed_by !== user) {
+        return res.status(403).json({
+          error: 'Este item já foi reservado por outra pessoa.'
+        });
+      }
+
+      update = { claimed: false, claimed_by: null };
+    }
+
     const { error } = await supabase
-      .from('gifts').update({ claimed: !gift.claimed }).eq('id', gift.id);
+      .from('gifts')
+      .update(update)
+      .eq('id', gift.id);
+
     if (error) throw error;
 
     const { data: person, error: pErr } = await supabase
-      .from('people').select('*').eq('id', gift.person_id).single();
+      .from('people')
+      .select('*')
+      .eq('id', gift.person_id)
+      .single();
+
     if (pErr) throw pErr;
 
     const gifts = await giftsForPerson(person.id);
-    res.json({ name: person.name, gifts });
+    res.json({
+      name: person.name,
+      gifts,
+      claimed: update.claimed
+    });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erro ao atualizar item' });
