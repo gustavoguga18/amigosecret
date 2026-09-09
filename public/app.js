@@ -102,7 +102,7 @@
             ${g.link ? `<a class="g-link" href="${escapeHtml(g.link)}" target="_blank" rel="noopener">ver link ↗</a>` : ''}
           </div>
           <div class="gift-actions">
-            ${!isMine ? `<button class="icon-btn ${g.claimed ? 'claim-on' : ''}" data-action="claim" data-id="${g.id}">${g.claimed ? 'desmarcar' : 'vou comprar'}</button>` : ''}
+            ${!isMine ? `<button class="icon-btn ${g.claimed ? 'claim-on' : ''}" data-action="claim" data-id="${g.id}" ${g.claimed && g.claimed_by !== currentUser ? 'disabled' : ''}>${g.claimed ? (g.claimed_by === currentUser ? 'desmarcar' : 'já escolhido') : 'vou comprar'}</button>` : ''}
             ${isMine ? `<button class="icon-btn remove" data-action="remove" data-id="${g.id}">remover</button>` : ''}
           </div>
         </li>`;
@@ -162,10 +162,13 @@
       btn.addEventListener('click', async () => {
         const id = btn.dataset.id;
         try{
-          const data = await api('/gifts/' + id + '/claim', { method: 'PATCH' });
+          const data = await api('/gifts/' + id + '/claim', {
+            method: 'PATCH',
+            body: JSON.stringify({ user: currentUser })
+          });
           peopleCache[selectedPerson] = data.gifts;
           renderPanel();
-          showToast('Atualizado.');
+          showToast(data.claimed ? 'Item reservado para você.' : 'Reserva desfeita.');
         }catch(e){ showToast('Não consegui atualizar.'); }
       });
     });
