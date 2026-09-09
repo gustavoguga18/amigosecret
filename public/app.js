@@ -60,17 +60,6 @@
     });
   }
 
-  function priceTagClass(price){
-    if(price === 'baixo') return 'price-baixo';
-    if(price === 'alto') return 'price-alto';
-    return 'price-medio';
-  }
-  function priceTagLabel(price){
-    if(price === 'baixo') return '$ até 50';
-    if(price === 'alto') return '$$$ acima de 100';
-    return '$$ 50–100';
-  }
-
   async function selectPerson(name){
     selectedPerson = name;
     panel.innerHTML = '<div class="loading-note">Carregando...</div>';
@@ -106,7 +95,6 @@
           <div class="content">
             <div class="title-row">
               <span class="g-title">${escapeHtml(g.title)}</span>
-              <span class="tag ${priceTagClass(g.price)}">${priceTagLabel(g.price)}</span>
               ${g.claimed ? '<span class="tag claimed-tag">já garantido</span>' : ''}
             </div>
             ${g.note ? `<div class="g-note">${escapeHtml(g.note)}</div>` : ''}
@@ -126,17 +114,9 @@
       <form class="add-form" id="add-form">
         <h3>Adicionar ideia de presente</h3>
         <div class="field-row">
-          <div class="field" style="flex:2;">
+          <div class="field">
             <label for="f-title">O que você quer</label>
             <input id="f-title" type="text" maxlength="80" placeholder="Ex: livro de receitas, tênis de corrida..." required />
-          </div>
-          <div class="field" style="max-width:160px;">
-            <label for="f-price">Faixa de preço</label>
-            <select id="f-price">
-              <option value="baixo">até R$ 50</option>
-              <option value="medio" selected>R$ 50 a 100</option>
-              <option value="alto">acima de R$ 100</option>
-            </select>
           </div>
         </div>
         <div class="field-row">
@@ -151,8 +131,9 @@
             <input id="f-link" type="url" placeholder="https://..." />
           </div>
           <div class="field">
-            <label for="f-image">Imagem (opcional, cole o link de uma foto)</label>
-            <input id="f-image" type="url" placeholder="https://exemplo.com/foto.jpg" />
+            <label for="f-image-file">Imagem (opcional)</label>
+            <input id="f-image-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" />
+            <small class="field-help">Escolha uma foto do celular ou computador (até 3 MB).</small>
           </div>
         </div>
         <img id="f-image-preview" class="image-preview" style="display:none;" alt="Pré-visualização" />
@@ -189,40 +170,57 @@
     });
 
     const form = document.getElementById('add-form');
-    const imageInput = document.getElementById('f-image');
+    const imageFileInput = document.getElementById('f-image-file');
     const imagePreview = document.getElementById('f-image-preview');
-    if(imageInput){
-      imageInput.addEventListener('input', () => {
-        const url = imageInput.value.trim();
-        if(url){
-          imagePreview.src = url;
-          imagePreview.style.display = 'block';
-        } else {
-          imagePreview.style.display = 'none';
+    let uploadedImage = '';
+
+    if(imageFileInput){
+      imageFileInput.addEventListener('change', () => {
+        const file = imageFileInput.files && imageFileInput.files[0];
+        uploadedImage = '';
+        imagePreview.style.display = 'none';
+        if(!file) return;
+
+        if(file.size > 3 * 1024 * 1024){
+          imageFileInput.value = '';
+          showToast('A imagem deve ter no máximo 3 MB.');
+          return;
         }
+        if(!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)){
+          imageFileInput.value = '';
+          showToast('Formato de imagem não suportado.');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          uploadedImage = String(reader.result || '');
+          imagePreview.src = uploadedImage;
+          imagePreview.style.display = 'block';
+        };
+        reader.onerror = () => showToast('Não consegui ler a imagem.');
+        reader.readAsDataURL(file);
       });
-      imagePreview.addEventListener('error', () => { imagePreview.style.display = 'none'; });
     }
+
     if(form){
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const title = document.getElementById('f-title').value.trim();
         if(!title) return;
-        const price = document.getElementById('f-price').value;
         const note = document.getElementById('f-note').value.trim();
         const link = document.getElementById('f-link').value.trim();
-        const image = document.getElementById('f-image').value.trim();
         try{
           const data = await api('/people/' + encodeURIComponent(selectedPerson) + '/gifts', {
             method: 'POST',
-            body: JSON.stringify({ title, price, note, link, image })
+            body: JSON.stringify({ title, note, link, image: uploadedImage })
           });
           peopleCache[selectedPerson] = data.gifts;
           await loadPeopleList();
           renderPeopleList();
           renderPanel();
           showToast('Ideia adicionada à sua lista!');
-        }catch(e){ showToast('Não consegui adicionar.'); }
+        }catch(e){ showToast(e.message || 'Não consegui adicionar.'); }
       });
     }
   }
