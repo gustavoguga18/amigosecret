@@ -67,8 +67,8 @@
   }
   function priceTagLabel(price){
     if(price === 'baixo') return '$ até 50';
-    if(price === 'alto') return '$$$ acima de 100';
-    return '$$ 50–100';
+    if(price === 'alto') return '$$$ acima de 150';
+    return '$$ 50–150';
   }
 
   async function selectPerson(name){
@@ -102,6 +102,7 @@
       gifts.forEach((g, i) => {
         html += `<li class="gift ${g.claimed ? 'is-claimed' : ''}" data-id="${g.id}">
           <div class="idx">${i+1}.</div>
+          ${g.image ? `<img class="g-thumb" src="${escapeHtml(g.image)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ''}
           <div class="content">
             <div class="title-row">
               <span class="g-title">${escapeHtml(g.title)}</span>
@@ -133,8 +134,8 @@
             <label for="f-price">Faixa de preço</label>
             <select id="f-price">
               <option value="baixo">até R$ 50</option>
-              <option value="medio" selected>R$ 50 a 100</option>
-              <option value="alto">acima de R$ 100</option>
+              <option value="medio" selected>R$ 50 a 150</option>
+              <option value="alto">acima de R$ 150</option>
             </select>
           </div>
         </div>
@@ -149,7 +150,12 @@
             <label for="f-link">Link (opcional)</label>
             <input id="f-link" type="url" placeholder="https://..." />
           </div>
+          <div class="field">
+            <label for="f-image">Imagem (opcional, cole o link de uma foto)</label>
+            <input id="f-image" type="url" placeholder="https://exemplo.com/foto.jpg" />
+          </div>
         </div>
+        <img id="f-image-preview" class="image-preview" style="display:none;" alt="Pré-visualização" />
         <button type="submit" class="btn">Adicionar à lista</button>
       </form>`;
     }
@@ -183,6 +189,20 @@
     });
 
     const form = document.getElementById('add-form');
+    const imageInput = document.getElementById('f-image');
+    const imagePreview = document.getElementById('f-image-preview');
+    if(imageInput){
+      imageInput.addEventListener('input', () => {
+        const url = imageInput.value.trim();
+        if(url){
+          imagePreview.src = url;
+          imagePreview.style.display = 'block';
+        } else {
+          imagePreview.style.display = 'none';
+        }
+      });
+      imagePreview.addEventListener('error', () => { imagePreview.style.display = 'none'; });
+    }
     if(form){
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -191,10 +211,11 @@
         const price = document.getElementById('f-price').value;
         const note = document.getElementById('f-note').value.trim();
         const link = document.getElementById('f-link').value.trim();
+        const image = document.getElementById('f-image').value.trim();
         try{
           const data = await api('/people/' + encodeURIComponent(selectedPerson) + '/gifts', {
             method: 'POST',
-            body: JSON.stringify({ title, price, note, link })
+            body: JSON.stringify({ title, price, note, link, image })
           });
           peopleCache[selectedPerson] = data.gifts;
           await loadPeopleList();
