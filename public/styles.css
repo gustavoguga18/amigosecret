@@ -356,6 +356,7 @@ form.add-form h3{
   font-family: inherit;
 }
 .switch-user:hover{ color: var(--pine); }
+.switch-user:disabled{ opacity: 0.5; cursor: not-allowed; }
 
 .loading-note{
   color: var(--ink-soft);
