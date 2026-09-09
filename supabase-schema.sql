@@ -22,11 +22,11 @@ create table if not exists public.gifts (
 
 create index if not exists gifts_person_id_idx on public.gifts(person_id);
 
--- Bucket público somente para leitura das imagens. O backend usa a Service Role
+-- Bucket público somente para leitura das imagens. O backend usa a Secret Key
 -- para fazer upload/remover arquivos sem expor essa chave no navegador.
 insert into storage.buckets (id, name, public)
 values ('gift-images', 'gift-images', true)
 on conflict (id) do update set public = true;
 
--- O backend faz as operações do Storage com Service Role.
--- Não coloque a SUPABASE_SERVICE_ROLE_KEY no frontend.
+-- O backend faz as operações do Storage com Secret Key.
+-- Não coloque a SUPABASE_SECRET_KEY no frontend.
