@@ -363,3 +363,77 @@ form.add-form h3{
   font-size: 0.9rem;
   padding: 20px 0;
 }
+
+
+/* Visualização ampliada das fotos */
+.g-thumb{
+  cursor: zoom-in;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.g-thumb:hover{
+  transform: scale(1.04);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.16);
+}
+.image-modal{
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0,0,0,0.82);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.image-modal.show{
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.image-modal-content{
+  max-width: min(92vw, 1100px);
+  max-height: 88vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.image-modal-content img{
+  display: block;
+  max-width: 92vw;
+  max-height: 88vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  background: #fff;
+}
+.image-modal-close{
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(255,255,255,0.45);
+  border-radius: 50%;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  font-size: 34px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1001;
+}
+.image-modal-close:hover{
+  background: rgba(0,0,0,0.7);
+}
+body.modal-open{
+  overflow: hidden;
+}
+@media (max-width: 680px){
+  .image-modal{ padding: 16px; }
+  .image-modal-content img{ max-width: 94vw; max-height: 84vh; }
+  .image-modal-close{ top: 10px; right: 10px; }
+}
