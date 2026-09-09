@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amigo Secreto da Família Ferreira</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<div id="gate-screen" class="wrap gate">
+  <h1>Amigo Secreto da Família Ferreira</h1>
+  <p>Digite seu nome para ver ou montar sua lista de ideias de presente. Todo mundo que abrir este site vai poder ver as listas e marcar itens como "já vou comprar" — sem revelar quem tirou quem.</p>
+  <input id="name-input" type="text" placeholder="Seu nome" maxlength="40" />
+  <div><button class="btn" id="enter-btn">Entrar</button></div>
+</div>
+
+<div id="main-screen" class="wrap" style="display:none;">
+  <header class="top">
+    <h1>Amigo Secreto da Família Ferreira</h1>
+    <p class="subtitle">
+      Você é <strong id="me-label"></strong> ·
+      <button class="switch-user" id="edit-name-btn">editar nome</button> ·
+      <button class="switch-user" id="switch-btn">trocar de pessoa</button>
+    </p>
+  </header>
+
+  <div class="board">
+    <nav class="people">
+      <div class="people-label">Quem já tem lista</div>
+      <div id="people-list"></div>
+    </nav>
+
+    <section class="panel" id="panel">
+      <div class="loading-note">Carregando listas...</div>
+    </section>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
