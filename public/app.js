@@ -158,6 +158,11 @@
       });
     });
 
+    // Clique na miniatura para abrir a imagem em tamanho grande
+    panel.querySelectorAll('.g-thumb').forEach(img => {
+      img.addEventListener('click', () => openImageModal(img.src, img.alt || 'Foto do presente'));
+    });
+
     panel.querySelectorAll('[data-action="claim"]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.id;
@@ -229,6 +234,43 @@
     }
   }
 
+
+  function openImageModal(src, alt){
+    let modal = document.getElementById('image-modal');
+    if(!modal){
+      modal = document.createElement('div');
+      modal.id = 'image-modal';
+      modal.className = 'image-modal';
+      modal.innerHTML = `
+        <button class="image-modal-close" type="button" aria-label="Fechar">×</button>
+        <div class="image-modal-content">
+          <img id="image-modal-img" src="" alt="" />
+        </div>`;
+      document.body.appendChild(modal);
+
+      modal.addEventListener('click', (e) => {
+        if(e.target === modal || e.target.classList.contains('image-modal-content')) closeImageModal();
+      });
+      modal.querySelector('.image-modal-close').addEventListener('click', closeImageModal);
+    }
+
+    const modalImg = document.getElementById('image-modal-img');
+    modalImg.src = src;
+    modalImg.alt = alt;
+    modal.classList.add('show');
+    document.body.classList.add('modal-open');
+  }
+
+  function closeImageModal(){
+    const modal = document.getElementById('image-modal');
+    if(!modal) return;
+    modal.classList.remove('show');
+    document.body.classList.remove('modal-open');
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape') closeImageModal();
+  });
 
   async function editCurrentName(){
     if(!currentUser) return;
