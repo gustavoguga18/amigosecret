@@ -25,10 +25,17 @@ db.exec(`
     price TEXT DEFAULT 'medio',
     note TEXT,
     link TEXT,
+    image TEXT,
     claimed INTEGER DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 `);
+
+// Migração: adiciona a coluna "image" em bancos criados antes dessa versão
+const giftColumns = db.prepare("PRAGMA table_info(gifts)").all().map(c => c.name);
+if (!giftColumns.includes('image')) {
+  db.exec('ALTER TABLE gifts ADD COLUMN image TEXT');
+}
 
 // --- Helpers ---
 function getOrCreatePerson(name) {
@@ -82,7 +89,7 @@ app.post('/api/people/:name/gifts', (req, res) => {
   const person = getOrCreatePerson(req.params.name);
   if (!person) return res.status(400).json({ error: 'Nome inválido' });
 
-  const { title, price, note, link } = req.body || {};
+  const { title, price, note, link, image } = req.body || {};
   const cleanTitle = String(title || '').trim().slice(0, 120);
   if (!cleanTitle) return res.status(400).json({ error: 'Título é obrigatório' });
 
@@ -90,10 +97,12 @@ app.post('/api/people/:name/gifts', (req, res) => {
   const cleanPrice = allowedPrices.includes(price) ? price : 'medio';
   const cleanNote = String(note || '').trim().slice(0, 300);
   const cleanLink = String(link || '').trim().slice(0, 300);
+  const cleanImage = String(image || '').trim().slice(0, 500);
+  const validImage = /^https?:\/\//i.test(cleanImage) ? cleanImage : '';
 
   db.prepare(
-    'INSERT INTO gifts (person_id, title, price, note, link) VALUES (?, ?, ?, ?, ?)'
-  ).run(person.id, cleanTitle, cleanPrice, cleanNote, cleanLink);
+    'INSERT INTO gifts (person_id, title, price, note, link, image) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(person.id, cleanTitle, cleanPrice, cleanNote, cleanLink, validImage);
 
   res.status(201).json({ name: person.name, gifts: giftsForPerson(person.id) });
 });
