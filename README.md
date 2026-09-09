@@ -1,64 +1,59 @@
 # Amigo Secreto da Família
 
-Site do amigo secreto da família com **Node.js + Express + Supabase**. As listas de presentes ficam no Supabase e as imagens são armazenadas no bucket `gift-images`.
+Site com backend (Node.js + Express) e banco de dados (SQLite) para todo mundo
+da família montar sua lista de ideias de presente. Os dados ficam guardados no
+servidor, então qualquer pessoa que abrir o link — de qualquer celular — vê e
+edita as mesmas listas.
 
 ## O que tem aqui
 
-- `server.js` — backend Express conectado ao Supabase.
-- `public/` — frontend HTML, CSS e JavaScript.
-- `supabase-schema.sql` — cria as tabelas `people` e `gifts` e configura o bucket de imagens.
-- `.env.example` — modelo das variáveis de ambiente.
+- `server.js` — backend em Express, com um banco SQLite (`data/amigo-secreto.db`,
+  criado automaticamente na primeira execução)
+- `public/` — frontend (HTML, CSS e JS puro, sem framework)
 
-## Configuração do Supabase
+## Rodando no seu computador
 
-1. No Supabase, abra **SQL Editor → New query**.
-2. Copie todo o conteúdo de `supabase-schema.sql` e clique em **Run**.
-3. Confirme que existem as tabelas `people` e `gifts`.
-4. Confirme que existe o bucket público `gift-images`.
-
-## Rodando localmente
-
-Requer Node.js 18 ou mais recente.
-
-1. Copie `.env.example` para `.env`.
-2. Preencha `SUPABASE_SECRET_KEY` com a Secret Key do projeto. **Nunca publique essa chave.**
-3. Instale e inicie:
+Requer [Node.js](https://nodejs.org) instalado (versão 18 ou mais recente).
 
 ```bash
 npm install
 npm start
 ```
 
-Depois abra `http://localhost:3000`.
+Depois é só abrir `http://localhost:3000` no navegador.
 
-## Deploy no Render
+## Colocando no ar (para a família acessar de qualquer lugar)
 
-Crie um **Web Service** conectado ao repositório GitHub. Use:
+Esse projeto é um servidor Node comum, então funciona em qualquer serviço de
+hospedagem que rode Node.js. Sugestões com plano gratuito, do mais simples ao
+mais flexível:
 
-- Build Command: `npm install`
-- Start Command: `npm start`
-- Instance Type: `Free`
+### Render.com (recomendado, mais simples)
+1. Crie uma conta em render.com e um repositório no GitHub com esses arquivos.
+2. Em Render, clique em "New +" → "Web Service" e aponte para o repositório.
+3. Build command: `npm install` — Start command: `npm start`.
+4. Em "Disks", adicione um disco persistente (ex: 1 GB) montado em `/opt/render/project/src/data`,
+   para o banco de dados não ser apagado a cada deploy.
+5. Ao terminar o deploy, você recebe um link tipo `https://seu-app.onrender.com` —
+   é esse link que você manda para a família.
 
-No Render, em **Environment Variables**, configure:
+### Railway.app
+1. Crie um projeto novo e conecte o repositório do GitHub.
+2. Railway detecta o Node automaticamente (`npm install` + `npm start`).
+3. Adicione um "Volume" persistente apontando para a pasta `data/`.
+4. Railway gera um domínio público (`.up.railway.app`) — dá pra apontar um domínio próprio depois.
 
-```text
-SUPABASE_URL=https://etrczkefuphiesskfqjx.supabase.co
-SUPABASE_SECRET_KEY=COLE_AQUI_A_SECRET_KEY
-SUPABASE_STORAGE_BUCKET=gift-images
-```
+### Um VPS próprio (ex: DigitalOcean, Hetzner)
+Se você já tem um servidor, instale o Node, copie os arquivos, rode
+`npm install && npm start` (idealmente atrás de um gerenciador de processo
+como o `pm2`, e com Nginx na frente para HTTPS e domínio próprio).
 
-Não faça upload do `.env` para o GitHub. O `.gitignore` deste projeto já bloqueia arquivos `.env`.
+> Só um cuidado: como não há login, quem tiver o link pode entrar com qualquer
+> nome. Para uso familiar isso normalmente não é problema, mas evite divulgar
+> o link publicamente.
 
-## Funcionalidades
+## Personalizando
 
-- Lista de pessoas e quantidade de sugestões.
-- Adição de presentes sem faixa de preço.
-- Upload de imagem para sugestão de presente (JPEG, PNG, WebP ou GIF, até 3 MB).
-- Link e observação para cada presente.
-- Marcar/desmarcar presente como escolhido.
-- Remover presente.
-- Alterar o nome da pessoa sem perder sua lista.
-- Persistência no Supabase PostgreSQL.
-- Imagens no Supabase Storage.
-
-> O sistema não possui autenticação. Qualquer pessoa com o link pode entrar com um nome.
+- Título do site: troque "Amigo Secreto da Família" em `public/index.html`.
+- Cores: no início de `public/styles.css`, nas variáveis dentro de `:root`.
+# amigosecret
