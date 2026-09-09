@@ -1,132 +1,282 @@
 const express = require('express');
+const crypto = require('crypto');
 const path = require('path');
-const Database = require('better-sqlite3');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_PATH = path.join(__dirname, 'data', 'amigo-secreto.db');
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'gift-images';
 
-// --- Banco de dados ---
-const fs = require('fs');
-fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
-const db = new Database(DB_PATH);
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS people (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL COLLATE NOCASE,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS gifts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    price TEXT DEFAULT 'medio',
-    note TEXT,
-    link TEXT,
-    image TEXT,
-    claimed INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  );
-`);
-
-// Migração: adiciona a coluna "image" em bancos criados antes dessa versão
-const giftColumns = db.prepare("PRAGMA table_info(gifts)").all().map(c => c.name);
-if (!giftColumns.includes('image')) {
-  db.exec('ALTER TABLE gifts ADD COLUMN image TEXT');
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn('AVISO: defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no ambiente antes de iniciar em produção.');
 }
 
-// --- Helpers ---
-function getOrCreatePerson(name) {
-  const clean = String(name || '').trim().slice(0, 60);
-  if (!clean) return null;
-  let person = db.prepare('SELECT * FROM people WHERE name = ?').get(clean);
-  if (!person) {
-    const info = db.prepare('INSERT INTO people (name) VALUES (?)').run(clean);
-    person = db.prepare('SELECT * FROM people WHERE id = ?').get(info.lastInsertRowid);
-  }
-  return person;
-}
+const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  : null;
 
-function giftsForPerson(personId) {
-  return db.prepare('SELECT * FROM gifts WHERE person_id = ? ORDER BY id ASC').all(personId)
-    .map(g => ({ ...g, claimed: !!g.claimed }));
-}
-
-// --- Middleware ---
 app.use(express.json({ limit: '6mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- API ---
+function ensureSupabase(res) {
+  if (!supabase) {
+    res.status(500).json({ error: 'Supabase não configurado. Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.' });
+    return false;
+  }
+  return true;
+}
 
-// Lista todas as pessoas com a contagem de itens
-app.get('/api/people', (req, res) => {
-  const people = db.prepare('SELECT id, name FROM people ORDER BY name COLLATE NOCASE ASC').all();
-  const withCounts = people.map(p => {
-    const count = db.prepare('SELECT COUNT(*) AS c FROM gifts WHERE person_id = ?').get(p.id).c;
-    return { name: p.name, count };
-  });
-  res.json(withCounts);
+function cleanName(value) {
+  return String(value || '').trim().slice(0, 60);
+}
+
+function cleanText(value, max) {
+  return String(value || '').trim().slice(0, max);
+}
+
+async function getPersonByName(name) {
+  const { data, error } = await supabase
+    .from('people')
+    .select('*')
+    .ilike('name', name)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function getPersonById(id) {
+  const { data, error } = await supabase.from('people').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function getOrCreatePerson(name) {
+  const clean = cleanName(name);
+  if (!clean) return null;
+
+  let person = await getPersonByName(clean);
+  if (person) return person;
+
+  const { data, error } = await supabase.from('people').insert({ name: clean }).select('*').single();
+  if (error) {
+    if (error.code === '23505') return getPersonByName(clean);
+    throw error;
+  }
+  return data;
+}
+
+async function giftsForPerson(personId) {
+  const { data, error } = await supabase
+    .from('gifts')
+    .select('*')
+    .eq('person_id', personId)
+    .order('id', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(g => ({ ...g, claimed: !!g.claimed }));
+}
+
+async function peopleWithCounts() {
+  const { data: people, error: peopleError } = await supabase
+    .from('people')
+    .select('id, name')
+    .order('name', { ascending: true });
+  if (peopleError) throw peopleError;
+
+  const ids = (people || []).map(p => p.id);
+  let gifts = [];
+  if (ids.length) {
+    const { data, error } = await supabase.from('gifts').select('person_id').in('person_id', ids);
+    if (error) throw error;
+    gifts = data || [];
+  }
+
+  const counts = gifts.reduce((acc, g) => {
+    acc[g.person_id] = (acc[g.person_id] || 0) + 1;
+    return acc;
+  }, {});
+
+  return (people || []).map(p => ({ name: p.name, count: counts[p.id] || 0 }));
+}
+
+function parseImageData(value) {
+  const image = cleanText(value, 5_000_000);
+  if (!image) return null;
+
+  const match = image.match(/^data:image\/(jpeg|png|webp|gif);base64,([A-Za-z0-9+/=]+)$/i);
+  if (!match) {
+    if (/^https?:\/\//i.test(image) && image.length <= 500) return { url: image };
+    throw new Error('Imagem inválida ou muito grande');
+  }
+
+  const ext = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
+  const mime = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+  const buffer = Buffer.from(match[2], 'base64');
+  if (buffer.length > 3 * 1024 * 1024) throw new Error('A imagem deve ter no máximo 3 MB.');
+  return { buffer, ext, mime };
+}
+
+async function uploadGiftImage(imageData) {
+  if (!imageData) return '';
+  if (imageData.url) return imageData.url;
+
+  const fileName = `gifts/${crypto.randomUUID()}.${imageData.ext}`;
+  const { error } = await supabase.storage
+    .from(SUPABASE_STORAGE_BUCKET)
+    .upload(fileName, imageData.buffer, {
+      contentType: imageData.mime,
+      cacheControl: '31536000',
+      upsert: false
+    });
+  if (error) throw error;
+
+  const { data } = supabase.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(fileName);
+  return data.publicUrl;
+}
+
+async function deleteGiftImage(url) {
+  if (!url || !SUPABASE_URL) return;
+  const marker = `/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/`;
+  const index = url.indexOf(marker);
+  if (index === -1) return;
+  const pathName = url.slice(index + marker.length);
+  if (pathName) await supabase.storage.from(SUPABASE_STORAGE_BUCKET).remove([pathName]);
+}
+
+app.get('/api/people', async (req, res) => {
+  try {
+    if (!ensureSupabase(res)) return;
+    res.json(await peopleWithCounts());
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Não consegui carregar as pessoas.' });
+  }
 });
 
-// Entra/cria uma pessoa e devolve a lista dela
-app.post('/api/people/:name/enter', (req, res) => {
-  const person = getOrCreatePerson(req.params.name);
-  if (!person) return res.status(400).json({ error: 'Nome inválido' });
-  res.json({ name: person.name, gifts: giftsForPerson(person.id) });
+app.post('/api/people/:name/enter', async (req, res) => {
+  try {
+    if (!ensureSupabase(res)) return;
+    const person = await getOrCreatePerson(req.params.name);
+    if (!person) return res.status(400).json({ error: 'Nome inválido' });
+    res.json({ name: person.name, gifts: await giftsForPerson(person.id) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Não consegui entrar na lista.' });
+  }
 });
 
-// Pega a lista de uma pessoa (sem criar)
-app.get('/api/people/:name', (req, res) => {
-  const person = db.prepare('SELECT * FROM people WHERE name = ?').get(req.params.name.trim());
-  if (!person) return res.status(404).json({ error: 'Pessoa não encontrada' });
-  res.json({ name: person.name, gifts: giftsForPerson(person.id) });
+app.get('/api/people/:name', async (req, res) => {
+  try {
+    if (!ensureSupabase(res)) return;
+    const person = await getPersonByName(cleanName(req.params.name));
+    if (!person) return res.status(404).json({ error: 'Pessoa não encontrada' });
+    res.json({ name: person.name, gifts: await giftsForPerson(person.id) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Não consegui carregar a lista.' });
+  }
 });
 
-// Adiciona um presente à lista de alguém
-app.post('/api/people/:name/gifts', (req, res) => {
-  const person = getOrCreatePerson(req.params.name);
-  if (!person) return res.status(400).json({ error: 'Nome inválido' });
+// Edita o nome da pessoa sem perder a lista de presentes.
+app.patch('/api/people/:name', async (req, res) => {
+  try {
+    if (!ensureSupabase(res)) return;
+    const oldName = cleanName(req.params.name);
+    const newName = cleanName(req.body && req.body.name);
+    if (!newName) return res.status(400).json({ error: 'Nome inválido' });
+    if (newName.toLocaleLowerCase() === oldName.toLocaleLowerCase()) {
+      const same = await getPersonByName(oldName);
+      if (!same) return res.status(404).json({ error: 'Pessoa não encontrada' });
+      return res.json({ name: same.name, gifts: await giftsForPerson(same.id) });
+    }
 
-  const { title, note, link, image } = req.body || {};
-  const cleanTitle = String(title || '').trim().slice(0, 120);
-  if (!cleanTitle) return res.status(400).json({ error: 'Título é obrigatório' });
+    const person = await getPersonByName(oldName);
+    if (!person) return res.status(404).json({ error: 'Pessoa não encontrada' });
+    const existing = await getPersonByName(newName);
+    if (existing && existing.id !== person.id) return res.status(409).json({ error: 'Esse nome já está sendo usado.' });
 
-  const cleanNote = String(note || '').trim().slice(0, 300);
-  const cleanLink = String(link || '').trim().slice(0, 300);
-  const cleanImage = String(image || '').trim();
-  const validImageUrl = /^https?:\/\//i.test(cleanImage) && cleanImage.length <= 500;
-  const validImageData = /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(cleanImage) && cleanImage.length <= 5_000_000;
-  const validImage = (validImageUrl || validImageData) ? cleanImage : '';
-  if (cleanImage && !validImage) return res.status(400).json({ error: 'Imagem inválida ou muito grande' });
+    const { data, error } = await supabase
+      .from('people')
+      .update({ name: newName })
+      .eq('id', person.id)
+      .select('*')
+      .single();
+    if (error) throw error;
 
-  db.prepare(
-    'INSERT INTO gifts (person_id, title, note, link, image) VALUES (?, ?, ?, ?, ?)'
-  ).run(person.id, cleanTitle, cleanNote, cleanLink, validImage);
-
-  res.status(201).json({ name: person.name, gifts: giftsForPerson(person.id) });
+    res.json({ name: data.name, gifts: await giftsForPerson(data.id) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Não consegui alterar o nome.' });
+  }
 });
 
-// Alterna o status "reservado" de um item
-app.patch('/api/gifts/:giftId/claim', (req, res) => {
-  const gift = db.prepare('SELECT * FROM gifts WHERE id = ?').get(req.params.giftId);
-  if (!gift) return res.status(404).json({ error: 'Item não encontrado' });
-  const newVal = gift.claimed ? 0 : 1;
-  db.prepare('UPDATE gifts SET claimed = ? WHERE id = ?').run(newVal, gift.id);
-  const person = db.prepare('SELECT * FROM people WHERE id = ?').get(gift.person_id);
-  res.json({ name: person.name, gifts: giftsForPerson(person.id) });
+app.post('/api/people/:name/gifts', async (req, res) => {
+  try {
+    if (!ensureSupabase(res)) return;
+    const person = await getOrCreatePerson(req.params.name);
+    if (!person) return res.status(400).json({ error: 'Nome inválido' });
+
+    const { title, note, link, image } = req.body || {};
+    const cleanTitle = cleanText(title, 120);
+    if (!cleanTitle) return res.status(400).json({ error: 'Título é obrigatório' });
+    const cleanNote = cleanText(note, 300);
+    const cleanLink = cleanText(link, 300);
+
+    let imageUrl = '';
+    if (image) imageUrl = await uploadGiftImage(parseImageData(image));
+
+    const { error } = await supabase.from('gifts').insert({
+      person_id: person.id,
+      title: cleanTitle,
+      note: cleanNote,
+      link: cleanLink,
+      image: imageUrl
+    });
+    if (error) throw error;
+
+    res.status(201).json({ name: person.name, gifts: await giftsForPerson(person.id) });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: error.message || 'Não consegui adicionar o presente.' });
+  }
 });
 
-// Remove um item da própria lista
-app.delete('/api/gifts/:giftId', (req, res) => {
-  const gift = db.prepare('SELECT * FROM gifts WHERE id = ?').get(req.params.giftId);
-  if (!gift) return res.status(404).json({ error: 'Item não encontrado' });
-  const person = db.prepare('SELECT * FROM people WHERE id = ?').get(gift.person_id);
-  db.prepare('DELETE FROM gifts WHERE id = ?').run(gift.id);
-  res.json({ name: person.name, gifts: giftsForPerson(person.id) });
+app.patch('/api/gifts/:giftId/claim', async (req, res) => {
+  try {
+    if (!ensureSupabase(res)) return;
+    const { data: gift, error } = await supabase.from('gifts').select('*').eq('id', req.params.giftId).maybeSingle();
+    if (error) throw error;
+    if (!gift) return res.status(404).json({ error: 'Item não encontrado' });
+
+    const { error: updateError } = await supabase.from('gifts').update({ claimed: !gift.claimed }).eq('id', gift.id);
+    if (updateError) throw updateError;
+    const person = await getPersonById(gift.person_id);
+    res.json({ name: person.name, gifts: await giftsForPerson(person.id) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Não consegui atualizar o item.' });
+  }
+});
+
+app.delete('/api/gifts/:giftId', async (req, res) => {
+  try {
+    if (!ensureSupabase(res)) return;
+    const { data: gift, error } = await supabase.from('gifts').select('*').eq('id', req.params.giftId).maybeSingle();
+    if (error) throw error;
+    if (!gift) return res.status(404).json({ error: 'Item não encontrado' });
+
+    const person = await getPersonById(gift.person_id);
+    const { error: deleteError } = await supabase.from('gifts').delete().eq('id', gift.id);
+    if (deleteError) throw deleteError;
+    await deleteGiftImage(gift.image);
+    res.json({ name: person.name, gifts: await giftsForPerson(person.id) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Não consegui remover o item.' });
+  }
 });
 
 app.listen(PORT, () => {
-  console.log(`Amigo Secreto da Família rodando em http://localhost:${PORT}`);
+  console.log(`Amigo Secreto da Família rodando na porta ${PORT}`);
 });
