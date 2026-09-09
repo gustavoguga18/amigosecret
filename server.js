@@ -55,7 +55,7 @@ function giftsForPerson(personId) {
 }
 
 // --- Middleware ---
-app.use(express.json());
+app.use(express.json({ limit: '6mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- API ---
@@ -89,20 +89,21 @@ app.post('/api/people/:name/gifts', (req, res) => {
   const person = getOrCreatePerson(req.params.name);
   if (!person) return res.status(400).json({ error: 'Nome inválido' });
 
-  const { title, price, note, link, image } = req.body || {};
+  const { title, note, link, image } = req.body || {};
   const cleanTitle = String(title || '').trim().slice(0, 120);
   if (!cleanTitle) return res.status(400).json({ error: 'Título é obrigatório' });
 
-  const allowedPrices = ['baixo', 'medio', 'alto'];
-  const cleanPrice = allowedPrices.includes(price) ? price : 'medio';
   const cleanNote = String(note || '').trim().slice(0, 300);
   const cleanLink = String(link || '').trim().slice(0, 300);
-  const cleanImage = String(image || '').trim().slice(0, 500);
-  const validImage = /^https?:\/\//i.test(cleanImage) ? cleanImage : '';
+  const cleanImage = String(image || '').trim();
+  const validImageUrl = /^https?:\/\//i.test(cleanImage) && cleanImage.length <= 500;
+  const validImageData = /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(cleanImage) && cleanImage.length <= 5_000_000;
+  const validImage = (validImageUrl || validImageData) ? cleanImage : '';
+  if (cleanImage && !validImage) return res.status(400).json({ error: 'Imagem inválida ou muito grande' });
 
   db.prepare(
-    'INSERT INTO gifts (person_id, title, price, note, link, image) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(person.id, cleanTitle, cleanPrice, cleanNote, cleanLink, validImage);
+    'INSERT INTO gifts (person_id, title, note, link, image) VALUES (?, ?, ?, ?, ?)'
+  ).run(person.id, cleanTitle, cleanNote, cleanLink, validImage);
 
   res.status(201).json({ name: person.name, gifts: giftsForPerson(person.id) });
 });
