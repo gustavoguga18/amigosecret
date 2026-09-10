@@ -35,10 +35,12 @@ function obterIP(req) {
 }
 
 app.use((req, res, next) => {
-  const ip = obterIP(req);
+  req.ipVisitante = obterIP(req);
 
   console.log(
-    `[ACESSO] ${new Date().toISOString()} | ${req.method} ${req.originalUrl} | IP: ${ip}`
+    `[ACESSO] ${new Date().toISOString()} | ` +
+    `${req.method} ${req.originalUrl} | ` +
+    `IP: ${req.ipVisitante}`
   );
 
   next();
@@ -122,9 +124,19 @@ app.get('/api/people', async (req, res) => {
 app.post('/api/people/:name/enter', async (req, res) => {
   try {
     const person = await getOrCreatePerson(req.params.name);
+
     if (!person) return res.status(400).json({ error: 'Nome inválido' });
+
+    console.log(
+      `[AMIGO SECRETO] ${person.name} | IP: ${req.ipVisitante} | ` +
+      `Data: ${new Date().toLocaleString('pt-BR', {
+        timeZone: 'America/Fortaleza'
+      })}`
+    );
+
     const gifts = await giftsForPerson(person.id);
     res.json({ name: person.name, gifts });
+
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erro ao entrar' });
