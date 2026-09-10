@@ -16,6 +16,69 @@
   const panel = document.getElementById('panel');
   const toastEl = document.getElementById('toast');
 
+  // Contagem regressiva para o Natal de 2026
+  const christmasTarget = new Date('2026-12-25T00:00:00');
+
+  function getChristmasCountdown(now){
+    if(now >= christmasTarget){
+      return { months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, finished: true };
+    }
+
+    // Calcula meses completos primeiro e depois o restante em dias/horas/minutos/segundos.
+    let months = (christmasTarget.getFullYear() - now.getFullYear()) * 12
+      + (christmasTarget.getMonth() - now.getMonth());
+    let anchor = new Date(now);
+    anchor.setMonth(anchor.getMonth() + months);
+
+    if(anchor > christmasTarget){
+      months--;
+      anchor = new Date(now);
+      anchor.setMonth(anchor.getMonth() + months);
+    }
+
+    let remaining = christmasTarget.getTime() - anchor.getTime();
+    const days = Math.floor(remaining / 86400000);
+    remaining -= days * 86400000;
+    const hours = Math.floor(remaining / 3600000);
+    remaining -= hours * 3600000;
+    const minutes = Math.floor(remaining / 60000);
+    remaining -= minutes * 60000;
+    const seconds = Math.floor(remaining / 1000);
+
+    return { months, days, hours, minutes, seconds, finished: false };
+  }
+
+  function updateChristmasCountdown(){
+    const countdowns = document.querySelectorAll('.christmas-countdown');
+    if(!countdowns.length) return;
+
+    const value = getChristmasCountdown(new Date());
+    countdowns.forEach((box) => {
+      const suffix = box.closest('#main-screen') ? '-main' : '';
+      const months = box.querySelector('#count-months' + suffix);
+      const days = box.querySelector('#count-days' + suffix);
+      const hours = box.querySelector('#count-hours' + suffix);
+      const minutes = box.querySelector('#count-minutes' + suffix);
+      const seconds = box.querySelector('#count-seconds' + suffix);
+
+      if(value.finished){
+        box.classList.add('finished');
+        box.querySelector('.countdown-title').textContent = '🎄 Feliz Natal! 🎅';
+        box.querySelector('.countdown-units').innerHTML = '<div class="countdown-title">Que seja um Natal cheio de alegria e união!</div>';
+        return;
+      }
+
+      months.textContent = String(value.months);
+      days.textContent = String(value.days);
+      hours.textContent = String(value.hours).padStart(2, '0');
+      minutes.textContent = String(value.minutes).padStart(2, '0');
+      seconds.textContent = String(value.seconds).padStart(2, '0');
+    });
+  }
+
+  updateChristmasCountdown();
+  setInterval(updateChristmasCountdown, 1000);
+
   function showToast(msg){
     toastEl.textContent = msg;
     toastEl.classList.add('show');
