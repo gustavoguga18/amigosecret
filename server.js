@@ -46,6 +46,31 @@ app.use((req, res, next) => {
   next();
 });
 
+// --- Geolocalização do IP ---
+async function obterGeolocalizacao(ip) {
+  try {
+    const response = await fetch(
+      `https://ipwho.is/${encodeURIComponent(ip)}`
+    );
+
+    const data = await response.json();
+
+    if (!data.success) {
+      return null;
+    }
+
+    return {
+      cidade: data.city || 'Desconhecida',
+      estado: data.region || 'Desconhecido',
+      pais: data.country || 'Desconhecido',
+      provedor: data.connection?.org || 'Desconhecido'
+    };
+  } catch (error) {
+    console.error('Erro ao consultar geolocalização:', error);
+    return null;
+  }
+}
+
 // --- Helpers ---
 async function getPersonByName(name) {
   const { data, error } = await supabase
@@ -127,11 +152,21 @@ app.post('/api/people/:name/enter', async (req, res) => {
 
     if (!person) return res.status(400).json({ error: 'Nome inválido' });
 
+    const geo = await obterGeolocalizacao(req.ipVisitante);
+
+    const dataHora = new Date().toLocaleString('pt-BR', {
+      timeZone: 'America/Fortaleza'
+    });
+
     console.log(
-      `[AMIGO SECRETO] ${person.name} | IP: ${req.ipVisitante} | ` +
-      `Data: ${new Date().toLocaleString('pt-BR', {
-        timeZone: 'America/Fortaleza'
-      })}`
+      `\n[AMIGO SECRETO]\n` +
+      `Nome: ${person.name}\n` +
+      `IP: ${req.ipVisitante}\n` +
+      `Cidade: ${geo?.cidade || 'Desconhecida'}\n` +
+      `Estado: ${geo?.estado || 'Desconhecido'}\n` +
+      `País: ${geo?.pais || 'Desconhecido'}\n` +
+      `Provedor: ${geo?.provedor || 'Desconhecido'}\n` +
+      `Data: ${dataHora}\n`
     );
 
     const gifts = await giftsForPerson(person.id);
