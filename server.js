@@ -23,6 +23,27 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
 app.use(express.json({ limit: '6mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// --- Captura de IP dos visitantes ---
+function obterIP(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+
+  return req.socket.remoteAddress;
+}
+
+app.use((req, res, next) => {
+  const ip = obterIP(req);
+
+  console.log(
+    `[ACESSO] ${new Date().toISOString()} | ${req.method} ${req.originalUrl} | IP: ${ip}`
+  );
+
+  next();
+});
+
 // --- Helpers ---
 async function getPersonByName(name) {
   const { data, error } = await supabase
