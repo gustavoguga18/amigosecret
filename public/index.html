@@ -6,115 +6,243 @@
 <title>Amigo Secreto da Família Ferreira</title>
 <link rel="stylesheet" href="/styles.css">
 </head>
+
 <body>
 
 <div id="gate-screen" class="wrap gate">
+
   <div class="christmas-countdown" aria-label="Contagem regressiva para o Natal">
     <div class="countdown-title">🎄 Contagem para o Natal</div>
+
     <div class="countdown-units">
-      <div class="countdown-unit"><strong id="count-months">0</strong><span>meses</span></div>
+
+      <div class="countdown-unit">
+        <strong id="count-months">0</strong>
+        <span>meses</span>
+      </div>
+
       <div class="countdown-separator">:</div>
-      <div class="countdown-unit"><strong id="count-days">0</strong><span>dias</span></div>
+
+      <div class="countdown-unit">
+        <strong id="count-days">0</strong>
+        <span>dias</span>
+      </div>
+
       <div class="countdown-separator">:</div>
-      <div class="countdown-unit"><strong id="count-hours">0</strong><span>horas</span></div>
+
+      <div class="countdown-unit">
+        <strong id="count-hours">0</strong>
+        <span>horas</span>
+      </div>
+
       <div class="countdown-separator">:</div>
-      <div class="countdown-unit"><strong id="count-minutes">0</strong><span>minutos</span></div>
+
+      <div class="countdown-unit">
+        <strong id="count-minutes">0</strong>
+        <span>minutos</span>
+      </div>
+
       <div class="countdown-separator">:</div>
-      <div class="countdown-unit"><strong id="count-seconds">0</strong><span>segundos</span></div>
+
+      <div class="countdown-unit">
+        <strong id="count-seconds">0</strong>
+        <span>segundos</span>
+      </div>
+
     </div>
   </div>
+
   <h1>Amigo Secreto da Família Ferreira</h1>
-  <p>Digite seu nome para ver ou montar sua lista de ideias de presente. Todo mundo que abrir este site vai poder ver as listas e marcar itens como "já vou comprar" — sem revelar quem tirou quem.</p>
-  <input id="name-input" type="text" placeholder="Seu nome" maxlength="40" />
-  <div><button class="btn" id="enter-btn">Entrar</button></div>
+
+  <p>
+    Digite seu nome para ver ou montar sua lista de ideias de presente.
+    Todo mundo que abrir este site vai poder ver as listas e marcar itens
+    como "já vou comprar" — sem revelar quem tirou quem.
+  </p>
+
+  <input
+    id="name-input"
+    type="text"
+    placeholder="Seu nome"
+    maxlength="40"
+  />
+
+  <div>
+    <button class="btn" id="enter-btn">Entrar</button>
+  </div>
+
 </div>
 
+
 <div id="main-screen" class="wrap" style="display:none;">
+
   <header class="top">
+
     <div class="christmas-countdown" aria-label="Contagem regressiva para o Natal">
-      <div class="countdown-title">🎄 Contagem para o Natal</div>
-      <div class="countdown-units">
-        <div class="countdown-unit"><strong id="count-months-main">0</strong><span>meses</span></div>
-        <div class="countdown-separator">:</div>
-        <div class="countdown-unit"><strong id="count-days-main">0</strong><span>dias</span></div>
-        <div class="countdown-separator">:</div>
-        <div class="countdown-unit"><strong id="count-hours-main">0</strong><span>horas</span></div>
-        <div class="countdown-separator">:</div>
-        <div class="countdown-unit"><strong id="count-minutes-main">0</strong><span>minutos</span></div>
-        <div class="countdown-separator">:</div>
-        <div class="countdown-unit"><strong id="count-seconds-main">0</strong><span>segundos</span></div>
+
+      <div class="countdown-title">
+        🎄 Contagem para o Natal
       </div>
+
+      <div class="countdown-units">
+
+        <div class="countdown-unit">
+          <strong id="count-months-main">0</strong>
+          <span>meses</span>
+        </div>
+
+        <div class="countdown-separator">:</div>
+
+        <div class="countdown-unit">
+          <strong id="count-days-main">0</strong>
+          <span>dias</span>
+        </div>
+
+        <div class="countdown-separator">:</div>
+
+        <div class="countdown-unit">
+          <strong id="count-hours-main">0</strong>
+          <span>horas</span>
+        </div>
+
+        <div class="countdown-separator">:</div>
+
+        <div class="countdown-unit">
+          <strong id="count-minutes-main">0</strong>
+          <span>minutos</span>
+        </div>
+
+        <div class="countdown-separator">:</div>
+
+        <div class="countdown-unit">
+          <strong id="count-seconds-main">0</strong>
+          <span>segundos</span>
+        </div>
+
+      </div>
+
     </div>
+
     <h1>Amigo Secreto da Família Ferreira</h1>
+
     <p class="subtitle">
       Você é <strong id="me-label"></strong> ·
-      <button class="switch-user" id="edit-name-btn">editar nome</button> ·
-      <button class="switch-user" id="switch-btn">trocar de pessoa</button>
+      <button class="switch-user" id="edit-name-btn">
+        editar nome
+      </button>
+      ·
+      <button class="switch-user" id="switch-btn">
+        trocar de pessoa
+      </button>
     </p>
+
   </header>
-<section class="contribution-card" aria-label="Acessos ao site">
-    <div class="contribution-header">
-      <div>
-        <h2>Acessos ao site</h2>
-        <p>Atividade registrada entre setembro de 2026 e janeiro de 2027.</p>
+
+
+  <!-- LISTAS DE PESSOAS E PRESENTES -->
+
+  <div class="board">
+
+    <nav class="people">
+
+      <div class="people-label">
+        Quem já tem lista
       </div>
 
-      <strong id="contributionTotal">0 acessos</strong>
+      <div id="people-list"></div>
+
+    </nav>
+
+
+    <section class="panel" id="panel">
+
+      <div class="loading-note">
+        Carregando listas...
+      </div>
+
+    </section>
+
+  </div>
+
+
+  <!-- GRÁFICO DE ACESSOS — FINAL DA PÁGINA -->
+
+  <section
+    class="contribution-card"
+    aria-label="Acessos ao site"
+  >
+
+    <div class="contribution-header">
+
+      <div>
+
+        <h2>Acessos ao site</h2>
+
+        <p>
+          Atividade registrada entre setembro de 2026 e janeiro de 2027.
+        </p>
+
+      </div>
+
+      <strong id="contributionTotal">
+        0 acessos
+      </strong>
+
     </div>
 
+
     <div class="contribution-wrapper">
-      <div class="contribution-months" id="contributionMonths"></div>
+
+      <div
+        class="contribution-months"
+        id="contributionMonths"
+      ></div>
+
 
       <div class="contribution-content">
+
         <div class="contribution-days">
+
           <span>Seg</span>
           <span>Qua</span>
           <span>Sex</span>
+
         </div>
 
-        <div class="contribution-grid" id="contributionGrid"></div>
+
+        <div
+          class="contribution-grid"
+          id="contributionGrid"
+        ></div>
+
       </div>
+
     </div>
 
+
     <div class="contribution-legend">
+
       <span>Menos</span>
+
       <i class="contribution-square level-0"></i>
       <i class="contribution-square level-1"></i>
       <i class="contribution-square level-2"></i>
       <i class="contribution-square level-3"></i>
       <i class="contribution-square level-4"></i>
+
       <span>Mais</span>
+
     </div>
+
   </section>
 
-    <div class="board">
-    <nav class="people">
-      <div class="people-label">Quem já tem lista</div>
-      <div id="people-list"></div>
-    </nav>
+</div>
 
-    <section class="panel" id="panel">
-      <div class="loading-note">Carregando listas...</div>
-    </section>
-  </div>
 
-  <!-- GRÁFICO DE ACESSOS — FINAL DA PÁGINA -->
-  <section class="contribution-card" aria-label="Acessos ao site">
-    <div class="contribution-header">
-      <div>
-        <h2>Acessos ao site</h2>
-        <p>Atividade registrada entre setembro de 2026 e janeiro de 2027.</p>
-      </div>
-
-      <strong id="contributionTotal">0 acessos</strong>
-    </div>
-
-    <div class="contribution-wrapper">
-      <div class="contribution-months" id="contributionMonths"></div>
-      
-</div> <!-- fecha #main-screen -->
 <div class="toast" id="toast"></div>
 
+
 <script src="/app.js"></script>
+
 </body>
 </html>
