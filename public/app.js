@@ -574,87 +574,36 @@ async function buscarAcessos(){
        * antes de 01/09/2026
        * depois de 31/01/2027
        */
-      if(
-        date < startDate ||
-        date > endDate
-      ){
+      if(date < startDate || date > endDate){
+  square.classList.add('empty');
+  square.style.visibility = 'hidden';
+} else {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const dayNumber = String(date.getDate()).padStart(2, '0');
+  const dateKey = `${year}-${month}-${dayNumber}`;
 
-        square.classList.add('empty');
+  const value = Number(acessosPorDia[dateKey] || 0);
 
-        square.style.visibility =
-          'hidden';
+  total += value;
 
-      }
+  square.classList.add(`level-${contributionLevel(value)}`);
 
-      /*
-       * Dias futuros.
-       *
-       * Não exibimos dados futuros.
-       */
-      else if(date > today){
+  const dateText = date.toLocaleDateString(
+    'pt-BR',
+    {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }
+  );
 
-        square.classList.add('empty');
+  square.title = `${value} ${
+    value === 1 ? 'acesso' : 'acessos'
+  } em ${dateText}`;
 
-        square.style.visibility =
-          'hidden';
-
-      }
-
-      else{
-
-        const year =
-          date.getFullYear();
-
-        const month =
-          String(
-            date.getMonth() + 1
-          ).padStart(2, '0');
-
-        const dayNumber =
-          String(
-            date.getDate()
-          ).padStart(2, '0');
-
-        const dateKey =
-          `${year}-${month}-${dayNumber}`;
-
-        /*
-         * Quantidade REAL de acessos
-         * registrada no Supabase.
-         */
-        const value =
-          Number(
-            acessosPorDia[dateKey] || 0
-          );
-
-        total += value;
-
-        square.classList.add(
-          `level-${contributionLevel(value)}`
-        );
-
-        const dateText =
-          date.toLocaleDateString(
-            'pt-BR',
-            {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric'
-            }
-          );
-
-        square.title =
-          `${value} ${
-            value === 1
-              ? 'acesso'
-              : 'acessos'
-          } em ${dateText}`;
-
-        square.setAttribute(
-          'aria-label',
-          square.title
-        );
-      }
+  square.setAttribute('aria-label', square.title);
+}
 
       weekEl.appendChild(square);
     }
