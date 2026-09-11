@@ -635,29 +635,20 @@ async function buscarAcessos(){
    * semana correspondente.
    */
   monthsToShow.forEach(monthDate => {
+  const monthEl = document.createElement('span');
+  monthEl.className = 'contribution-month';
+  monthEl.textContent = monthNames[monthDate.getMonth()];
 
-    const monthEl =
-      document.createElement('span');
+  const diffDays = Math.floor((monthDate - start) / 86400000);
+  const weekPosition = diffDays / 7;
 
-    monthEl.className =
-      'contribution-month';
+  const weekWidth = 11;
+  const weekGap = 4;
 
-    monthEl.textContent =
-      monthNames[monthDate.getMonth()];
+  monthEl.style.left = `${weekPosition * (weekWidth + weekGap)}px`;
 
-    const diffDays =
-      Math.floor(
-        (monthDate - start) / 86400000
-      );
-
-    const weekPosition =
-      diffDays / 7;
-
-    monthEl.style.left =
-      `${(weekPosition / totalWeeks) * 100}%`;
-
-    months.appendChild(monthEl);
-  });
+  months.appendChild(monthEl);
+});
 
   /*
    * Total de acessos no período:
