@@ -425,49 +425,40 @@
   }
 
   async function registrarAcesso(){
-    try{
-      const { error } = await supabase
-        .from('acessos')
-        .insert({});
+  try{
+    const response = await fetch('/api/acessos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
+    });
 
-      if(error){
-        console.error('Erro ao registrar acesso:', error);
-      }
-    }catch(error){
-      console.error('Erro inesperado ao registrar acesso:', error);
+    if(!response.ok){
+      throw new Error(`HTTP ${response.status}`);
     }
+
+  }catch(error){
+    console.error('Erro ao registrar acesso:', error);
   }
+}
 
-  async function buscarAcessos(){
-    try{
-      const { data, error } = await supabase
-        .from('acessos')
-        .select('data');
 
-      if(error){
-        console.error('Erro ao buscar acessos:', error);
-        return {};
-      }
+async function buscarAcessos(){
+  try{
+    const response = await fetch('/api/acessos');
 
-      const acessosPorDia = {};
-
-      (data || []).forEach(acesso => {
-        if(!acesso.data) return;
-
-        if(!acessosPorDia[acesso.data]){
-          acessosPorDia[acesso.data] = 0;
-        }
-
-        acessosPorDia[acesso.data]++;
-      });
-
-      return acessosPorDia;
-
-    }catch(error){
-      console.error('Erro inesperado ao buscar acessos:', error);
-      return {};
+    if(!response.ok){
+      throw new Error(`HTTP ${response.status}`);
     }
+
+    return await response.json();
+
+  }catch(error){
+    console.error('Erro ao buscar acessos:', error);
+    return {};
   }
+}
 
   async function createContributionGraph(){
 
