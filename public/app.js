@@ -603,6 +603,43 @@ async function buscarAcessos(){
   } em ${dateText}`;
 
   square.setAttribute('aria-label', square.title);
+        square.addEventListener('click', (event) => {
+  const tooltip = document.getElementById('contributionTooltip');
+
+  if(!tooltip) return;
+
+  tooltip.textContent = square.title;
+  tooltip.classList.add('show');
+
+  const rect = square.getBoundingClientRect();
+
+  let left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
+  let top = rect.top - tooltip.offsetHeight - 8;
+
+  // Não deixar sair pela esquerda
+  if(left < 8){
+    left = 8;
+  }
+
+  // Não deixar sair pela direita
+  if(left + tooltip.offsetWidth > window.innerWidth - 8){
+    left = window.innerWidth - tooltip.offsetWidth - 8;
+  }
+
+  // Se não houver espaço acima, coloca abaixo
+  if(top < 8){
+    top = rect.bottom + 8;
+  }
+
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
+
+  clearTimeout(square.tooltipTimeout);
+
+  square.tooltipTimeout = setTimeout(() => {
+    tooltip.classList.remove('show');
+  }, 2500);
+});
 }
 
       weekEl.appendChild(square);
