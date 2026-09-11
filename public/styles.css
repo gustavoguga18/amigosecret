@@ -574,7 +574,7 @@ body.modal-open{
   left:30px;
   right:0;
   height:18px;
-  min-width:700px;
+  min-width:0;
 }
 
 .contribution-month{
