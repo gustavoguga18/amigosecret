@@ -411,7 +411,260 @@
     nameInput.value = '';
     nameInput.focus();
   });
+  
+  /* =========================================================
+     GRÁFICO DE ACESSOS REAIS
+     ========================================================= */
 
+  function contributionLevel(value){
+    if(value === 0) return 0;
+    if(value <= 2) return 1;
+    if(value <= 5) return 2;
+    if(value <= 10) return 3;
+    return 4;
+  }
+
+  async function registrarAcesso(){
+    try{
+      const { error } = await supabase
+        .from('acessos')
+        .insert({});
+
+      if(error){
+        console.error('Erro ao registrar acesso:', error);
+      }
+    }catch(error){
+      console.error('Erro inesperado ao registrar acesso:', error);
+    }
+  }
+
+  async function buscarAcessos(){
+    try{
+      const { data, error } = await supabase
+        .from('acessos')
+        .select('data');
+
+      if(error){
+        console.error('Erro ao buscar acessos:', error);
+        return {};
+      }
+
+      const acessosPorDia = {};
+
+      (data || []).forEach(acesso => {
+        if(!acesso.data) return;
+
+        if(!acessosPorDia[acesso.data]){
+          acessosPorDia[acesso.data] = 0;
+        }
+
+        acessosPorDia[acesso.data]++;
+      });
+
+      return acessosPorDia;
+
+    }catch(error){
+      console.error('Erro inesperado ao buscar acessos:', error);
+      return {};
+    }
+  }
+
+  async function createContributionGraph(){
+
+    const grid = document.getElementById('contributionGrid');
+    const months = document.getElementById('contributionMonths');
+    const totalEl = document.getElementById('contributionTotal');
+
+    if(!grid || !months || !totalEl) return;
+
+    grid.innerHTML = '';
+    months.innerHTML = '';
+
+    const acessosPorDia = await buscarAcessos();
+
+    const year = new Date().getFullYear();
+
+    const monthNames = [
+      'Jan','Fev','Mar','Abr','Mai','Jun',
+      'Jul','Ago','Set','Out','Nov','Dez'
+    ];
+
+    const firstDay = new Date(year, 0, 1);
+    const lastDay = new Date(year, 11, 31);
+
+    /*
+     * JavaScript:
+     * Domingo = 0
+     * Segunda = 1
+     * ...
+     * Sábado = 6
+     *
+     * O gráfico começa na segunda-feira.
+     */
+
+    let startDay = firstDay.getDay();
+
+    startDay = startDay === 0
+      ? 6
+      : startDay - 1;
+
+    const totalDays =
+      Math.floor(
+        (lastDay - firstDay) / 86400000
+      ) + 1;
+
+    const totalWeeks =
+      Math.ceil(
+        (startDay + totalDays) / 7
+      );
+
+    let total = 0;
+
+    for(let week = 0; week < totalWeeks; week++){
+
+      const weekEl = document.createElement('div');
+
+      weekEl.className =
+        'contribution-week';
+
+      for(let day = 0; day < 7; day++){
+
+        const dayIndex =
+          (week * 7) + day - startDay;
+
+        const square =
+          document.createElement('i');
+
+        square.className =
+          'contribution-square';
+
+        /*
+         * Espaços antes de 1º de janeiro
+         * ou depois de 31 de dezembro.
+         */
+        if(
+          dayIndex < 0 ||
+          dayIndex >= totalDays
+        ){
+
+          square.classList.add('empty');
+          square.style.visibility = 'hidden';
+
+        }else{
+
+          const date =
+            new Date(
+              year,
+              0,
+              dayIndex + 1
+            );
+
+          const month =
+            String(
+              date.getMonth() + 1
+            ).padStart(2, '0');
+
+          const dayNumber =
+            String(
+              date.getDate()
+            ).padStart(2, '0');
+
+          const dateKey =
+            `${year}-${month}-${dayNumber}`;
+
+          /*
+           * Quantidade REAL de acessos
+           * registrados no Supabase.
+           */
+          const value =
+            acessosPorDia[dateKey] || 0;
+
+          total += value;
+
+          square.classList.add(
+            `level-${contributionLevel(value)}`
+          );
+
+          const dateText =
+            date.toLocaleDateString(
+              'pt-BR',
+              {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+              }
+            );
+
+          square.title =
+            `${value} ${
+              value === 1
+                ? 'acesso'
+                : 'acessos'
+            } em ${dateText}`;
+
+          square.setAttribute(
+            'aria-label',
+            square.title
+          );
+        }
+
+        weekEl.appendChild(square);
+      }
+
+      grid.appendChild(weekEl);
+    }
+
+    /*
+     * Labels dos meses
+     */
+    for(let month = 0; month < 12; month++){
+
+      const date =
+        new Date(year, month, 1);
+
+      const dayOfYear =
+        Math.floor(
+          (date - firstDay) / 86400000
+        );
+
+      const week =
+        Math.floor(
+          (dayOfYear + startDay) / 7
+        );
+
+      const monthEl =
+        document.createElement('span');
+
+      monthEl.className =
+        'contribution-month';
+
+      monthEl.textContent =
+        monthNames[month];
+
+      monthEl.style.left =
+        `${(week / totalWeeks) * 100}%`;
+
+      months.appendChild(monthEl);
+    }
+
+    /*
+     * Total mostrado no topo do gráfico.
+     */
+    totalEl.textContent =
+      `${total} ${
+        total === 1
+          ? 'acesso'
+          : 'acessos'
+      } em ${year}`;
+  }
+
+  /*
+   * Registra o carregamento da página
+   * e atualiza o gráfico.
+   */
+  registrarAcesso();
+  createContributionGraph();
+  
   // Boot: se já tem nome salvo neste navegador, entra direto
   const savedName = localStorage.getItem(STORAGE_KEY);
   if(savedName){
