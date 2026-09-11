@@ -120,6 +120,48 @@ function validateImage(image) {
 
 // --- API ---
 
+// Registra um acesso ao site
+app.post('/api/acessos', async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('acessos')
+      .insert({});
+
+    if (error) throw error;
+
+    res.status(201).json({ ok: true });
+  } catch (e) {
+    console.error('Erro ao registrar acesso:', e);
+    res.status(500).json({ error: 'Erro ao registrar acesso' });
+  }
+});
+
+// Retorna os acessos agrupados por dia
+app.get('/api/acessos', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('acessos')
+      .select('data')
+      .order('data', { ascending: true });
+
+    if (error) throw error;
+
+    const acessosPorDia = {};
+
+    (data || []).forEach((acesso) => {
+      if (!acesso.data) return;
+
+      acessosPorDia[acesso.data] =
+        (acessosPorDia[acesso.data] || 0) + 1;
+    });
+
+    res.json(acessosPorDia);
+
+  } catch (e) {
+    console.error('Erro ao buscar acessos:', e);
+    res.status(500).json({ error: 'Erro ao buscar acessos' });
+  }
+});
 // Lista todas as pessoas com a contagem de itens
 app.get('/api/people', async (req, res) => {
   try {
