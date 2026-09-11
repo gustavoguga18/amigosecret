@@ -462,193 +462,266 @@ async function buscarAcessos(){
 
   async function createContributionGraph(){
 
-    const grid = document.getElementById('contributionGrid');
-    const months = document.getElementById('contributionMonths');
-    const totalEl = document.getElementById('contributionTotal');
+  const grid = document.getElementById('contributionGrid');
+  const months = document.getElementById('contributionMonths');
+  const totalEl = document.getElementById('contributionTotal');
 
-    if(!grid || !months || !totalEl) return;
+  if(!grid || !months || !totalEl) return;
 
-    grid.innerHTML = '';
-    months.innerHTML = '';
+  grid.innerHTML = '';
+  months.innerHTML = '';
 
-    const acessosPorDia = await buscarAcessos();
+  // Busca os acessos reais registrados no Supabase
+  const acessosPorDia = await buscarAcessos();
 
-    const year = new Date().getFullYear();
+  /*
+   * PERÍODO DO GRÁFICO
+   *
+   * Setembro/2026 até Janeiro/2027
+   */
+  const startDate = new Date(2026, 8, 1);  // 01/09/2026
+  const endDate = new Date(2027, 0, 31);    // 31/01/2027
 
-    const monthNames = [
-      'Jan','Fev','Mar','Abr','Mai','Jun',
-      'Jul','Ago','Set','Out','Nov','Dez'
-    ];
+  /*
+   * O gráfico começa sempre na segunda-feira
+   * e termina sempre no domingo.
+   *
+   * JavaScript:
+   * Domingo = 0
+   * Segunda = 1
+   * ...
+   * Sábado = 6
+   */
 
-    const firstDay = new Date(year, 0, 1);
-    const lastDay = new Date(year, 11, 31);
+  const start = new Date(startDate);
+  const end = new Date(endDate);
 
-    /*
-     * JavaScript:
-     * Domingo = 0
-     * Segunda = 1
-     * ...
-     * Sábado = 6
-     *
-     * O gráfico começa na segunda-feira.
-     */
+  // Ajusta início para a segunda-feira da semana
+  const startDay = start.getDay();
 
-    let startDay = firstDay.getDay();
-
-    startDay = startDay === 0
+  const daysFromMonday =
+    startDay === 0
       ? 6
       : startDay - 1;
 
-    const totalDays =
-      Math.floor(
-        (lastDay - firstDay) / 86400000
-      ) + 1;
+  start.setDate(start.getDate() - daysFromMonday);
 
-    const totalWeeks =
-      Math.ceil(
-        (startDay + totalDays) / 7
-      );
+  // Ajusta fim para o domingo da semana
+  const endDay = end.getDay();
 
-    let total = 0;
+  const daysToSunday =
+    endDay === 0
+      ? 0
+      : 7 - endDay;
 
-    for(let week = 0; week < totalWeeks; week++){
+  end.setDate(end.getDate() + daysToSunday);
 
-      const weekEl = document.createElement('div');
+  /*
+   * Calcula quantidade de semanas completas.
+   */
+  const totalDays =
+    Math.floor(
+      (end - start) / 86400000
+    ) + 1;
 
-      weekEl.className =
-        'contribution-week';
+  const totalWeeks =
+    Math.ceil(totalDays / 7);
 
-      for(let day = 0; day < 7; day++){
+  let total = 0;
 
-        const dayIndex =
-          (week * 7) + day - startDay;
+  /*
+   * Data atual.
+   *
+   * Dias futuros serão ocultados.
+   */
+  const today = new Date();
 
-        const square =
-          document.createElement('i');
+  today.setHours(23, 59, 59, 999);
 
-        square.className =
-          'contribution-square';
+  /*
+   * Cria as semanas.
+   */
+  for(let week = 0; week < totalWeeks; week++){
 
-        /*
-         * Espaços antes de 1º de janeiro
-         * ou depois de 31 de dezembro.
-         */
-        if(
-          dayIndex < 0 ||
-          dayIndex >= totalDays
-        ){
+    const weekEl =
+      document.createElement('div');
 
-          square.classList.add('empty');
-          square.style.visibility = 'hidden';
+    weekEl.className =
+      'contribution-week';
 
-        }else{
-
-          const date =
-            new Date(
-              year,
-              0,
-              dayIndex + 1
-            );
-
-          const month =
-            String(
-              date.getMonth() + 1
-            ).padStart(2, '0');
-
-          const dayNumber =
-            String(
-              date.getDate()
-            ).padStart(2, '0');
-
-          const dateKey =
-            `${year}-${month}-${dayNumber}`;
-
-          /*
-           * Quantidade REAL de acessos
-           * registrados no Supabase.
-           */
-          const value =
-            acessosPorDia[dateKey] || 0;
-
-          total += value;
-
-          square.classList.add(
-            `level-${contributionLevel(value)}`
-          );
-
-          const dateText =
-            date.toLocaleDateString(
-              'pt-BR',
-              {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-              }
-            );
-
-          square.title =
-            `${value} ${
-              value === 1
-                ? 'acesso'
-                : 'acessos'
-            } em ${dateText}`;
-
-          square.setAttribute(
-            'aria-label',
-            square.title
-          );
-        }
-
-        weekEl.appendChild(square);
-      }
-
-      grid.appendChild(weekEl);
-    }
-
-    /*
-     * Labels dos meses
-     */
-    for(let month = 0; month < 12; month++){
+    for(let day = 0; day < 7; day++){
 
       const date =
-        new Date(year, month, 1);
+        new Date(start);
 
-      const dayOfYear =
-        Math.floor(
-          (date - firstDay) / 86400000
+      date.setDate(
+        start.getDate() +
+        (week * 7) +
+        day
+      );
+
+      date.setHours(0, 0, 0, 0);
+
+      const square =
+        document.createElement('i');
+
+      square.className =
+        'contribution-square';
+
+      /*
+       * Dias fora do período solicitado:
+       *
+       * antes de 01/09/2026
+       * depois de 31/01/2027
+       */
+      if(
+        date < startDate ||
+        date > endDate
+      ){
+
+        square.classList.add('empty');
+
+        square.style.visibility =
+          'hidden';
+
+      }
+
+      /*
+       * Dias futuros.
+       *
+       * Não exibimos dados futuros.
+       */
+      else if(date > today){
+
+        square.classList.add('empty');
+
+        square.style.visibility =
+          'hidden';
+
+      }
+
+      else{
+
+        const year =
+          date.getFullYear();
+
+        const month =
+          String(
+            date.getMonth() + 1
+          ).padStart(2, '0');
+
+        const dayNumber =
+          String(
+            date.getDate()
+          ).padStart(2, '0');
+
+        const dateKey =
+          `${year}-${month}-${dayNumber}`;
+
+        /*
+         * Quantidade REAL de acessos
+         * registrada no Supabase.
+         */
+        const value =
+          Number(
+            acessosPorDia[dateKey] || 0
+          );
+
+        total += value;
+
+        square.classList.add(
+          `level-${contributionLevel(value)}`
         );
 
-      const week =
-        Math.floor(
-          (dayOfYear + startDay) / 7
+        const dateText =
+          date.toLocaleDateString(
+            'pt-BR',
+            {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric'
+            }
+          );
+
+        square.title =
+          `${value} ${
+            value === 1
+              ? 'acesso'
+              : 'acessos'
+          } em ${dateText}`;
+
+        square.setAttribute(
+          'aria-label',
+          square.title
         );
+      }
 
-      const monthEl =
-        document.createElement('span');
-
-      monthEl.className =
-        'contribution-month';
-
-      monthEl.textContent =
-        monthNames[month];
-
-      monthEl.style.left =
-        `${(week / totalWeeks) * 100}%`;
-
-      months.appendChild(monthEl);
+      weekEl.appendChild(square);
     }
 
-    /*
-     * Total mostrado no topo do gráfico.
-     */
-    totalEl.textContent =
-      `${total} ${
-        total === 1
-          ? 'acesso'
-          : 'acessos'
-      } em ${year}`;
+    grid.appendChild(weekEl);
   }
 
+  /*
+   * NOMES DOS MESES
+   *
+   * Setembro → Outubro → Novembro
+   * → Dezembro → Janeiro
+   */
+  const monthNames = [
+    'Jan','Fev','Mar','Abr','Mai','Jun',
+    'Jul','Ago','Set','Out','Nov','Dez'
+  ];
+
+  const monthsToShow = [
+    new Date(2026, 8, 1),  // Setembro
+    new Date(2026, 9, 1),  // Outubro
+    new Date(2026, 10, 1), // Novembro
+    new Date(2026, 11, 1), // Dezembro
+    new Date(2027, 0, 1)   // Janeiro
+  ];
+
+  /*
+   * Posiciona cada mês exatamente na
+   * semana correspondente.
+   */
+  monthsToShow.forEach(monthDate => {
+
+    const monthEl =
+      document.createElement('span');
+
+    monthEl.className =
+      'contribution-month';
+
+    monthEl.textContent =
+      monthNames[monthDate.getMonth()];
+
+    const diffDays =
+      Math.floor(
+        (monthDate - start) / 86400000
+      );
+
+    const weekPosition =
+      diffDays / 7;
+
+    monthEl.style.left =
+      `${(weekPosition / totalWeeks) * 100}%`;
+
+    months.appendChild(monthEl);
+  });
+
+  /*
+   * Total de acessos no período:
+   *
+   * Setembro/2026 → Janeiro/2027
+   */
+  totalEl.textContent =
+    `${total} ${
+      total === 1
+        ? 'acesso'
+        : 'acessos'
+    } de Set/2026 a Jan/2027`;
+}
   /*
    * Registra o carregamento da página
    * e atualiza o gráfico.
