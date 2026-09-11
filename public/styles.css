@@ -746,3 +746,25 @@ body.modal-open{
     margin-top:12px;
   }
 }
+/* =========================================================
+   TOOLTIP DO GRÁFICO NO CELULAR
+   ========================================================= */
+
+.contribution-tooltip{
+  position:fixed;
+  z-index:9999;
+  display:none;
+  padding:7px 10px;
+  background:var(--pine-dark);
+  color:#fff;
+  border-radius:5px;
+  font-size:.72rem;
+  line-height:1.2;
+  white-space:nowrap;
+  pointer-events:none;
+  box-shadow:0 4px 12px rgba(0,0,0,.18);
+}
+
+.contribution-tooltip.show{
+  display:block;
+}
